@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+# -*- encoding: utf-8 -*-
 from zk import ZK, const
 
 NO_JOBS=0
@@ -13,7 +15,8 @@ class ZkManager(object):
         self.zk = ZK(ip, port=port, timeout=timeout,verbose=verbose)
     
     def _log(self,msg):
-        print(msg)
+		if self.verbose:
+			print(msg)
         
     def __get_info_user(self,user):
        return {
