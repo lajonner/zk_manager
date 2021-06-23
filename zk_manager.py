@@ -12,11 +12,12 @@ class ZkManager(object):
     
     def __init__(self,ip,port=4370,timeout=5,verbose=False):        
         self.conn = None
-        self.zk = ZK(ip, port=port, timeout=timeout,verbose=verbose)
+        self.verbose=verbose
+        self.zk = ZK(ip, port=port, timeout=timeout,verbose=self.verbose)
     
     def _log(self,msg):
-		if self.verbose:
-			print(msg)
+        if (self.verbose):
+            print(msg)
         
     def __get_info_user(self,user):
        return {
@@ -100,6 +101,7 @@ class ZkManager(object):
                 if self.conn:
                     self.conn.disconnect()
         return values
+    
     
     def _exists(self,users,uid):
         if users:
@@ -198,7 +200,7 @@ class ZkManager(object):
                     self.conn.disconnect()
         return values
     
-    def clear_attendances(self):
+    def clear_attendances(self,read_attendances=True):
         values={"attendances":None,
                 "status":NO_JOBS,
                 "message":None}
@@ -206,7 +208,7 @@ class ZkManager(object):
             try:
                 self.conn = self.zk.connect()
                 self.conn.disable_device()
-                attendances=self.conn.get_attendance()   
+                attendances=read_attendances and self.conn.get_attendance() or []  
                 self.conn.clear_attendance()             
                 self.conn.enable_device()             
                 values["attendances"]=attendances                
@@ -281,6 +283,7 @@ class ZkManager(object):
             values["status"]=ERROR
             values["message"]="footprints range from 0 to 9 (left to right)"            
             return values
+        flag_continue=True
         if self.zk:
             try:
                 self.conn = self.zk.connect()
@@ -307,6 +310,7 @@ class ZkManager(object):
                         values["status"]=ERROR
                         values["message"]="REINTENTE CON LA TOMA DE HUELLAS"
                         self.conn.test_voice(4) # not registered
+                flag_continue=False
                 self.conn.enable_device()                
             except Exception as e:
                 values["user"]=None                
@@ -314,5 +318,12 @@ class ZkManager(object):
                 values["message"]=str(e)               
             finally:
                 if self.conn:
+                    try:
+                        if flag_continue:
+                            self.conn.cancel_capture()
+                            self.conn.enable_device()  
+                            flag_continue=False                          
+                    except Exception as er:
+                        self._log(str(er))
                     self.conn.disconnect()
         return values
